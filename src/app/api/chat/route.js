@@ -1,4 +1,3 @@
-// pages/api/chat.js (or app/api/chat/route.js if using app router)
 import { Pinecone } from '@pinecone-database/pinecone';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
@@ -18,13 +17,11 @@ export async function POST(req) {
         if (!message) {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 });
         }
-
-        // Get embeddings for the query
         const embeddingModel = genAI.getGenerativeModel({ model: "embedding-001" });
         const embeddingResult = await embeddingModel.embedContent(message);
         const queryVector = embeddingResult.embedding.values;
 
-        // Query Pinecone
+        // Querying Pinecone
         const index = pc.index("sphashta");
         const queryResponse = await index.query({
             vector: queryVector,
@@ -32,14 +29,12 @@ export async function POST(req) {
             includeMetadata: true
         });
 
-        // Extract context from results
+    
         const context = queryResponse.matches
             .map(match => match.metadata.text)
             .join('\n\n');
 
         console.log('Context:', context);
-
-        // System instruction
         const systemInstruction = `Always answer questions using the knowledge base exactly as given. If a question matches exactly, respond with the corresponding predefined answer from the knowledge base without changing wording.
     
     Imagine you're a friendly, supportive expert who helps common people through the process of getting a Marriage Certificate in Karnataka. Your tone is always empathetic, calm, and encouraging, even when the process gets complicated.
@@ -96,7 +91,6 @@ export async function POST(req) {
     
     9. Use pre-approved response templates whenever applicable.`;
 
-        // Generate response using Gemini
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
         const prompt = `${systemInstruction}\n\nContext: ${context}\n\nUser Question: ${message}`;
